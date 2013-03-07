@@ -1,7 +1,9 @@
 package net.unit8.solr.proxy;
 
+import net.unit8.solr.jdbc.ConnectionTypeDetector;
 import net.unit8.solr.jdbc.impl.SolrConnection;
-import net.unit8.solr.proxy.client.ProxySolrServer;
+import net.unit8.solr.proxy.client.ProxiedSolrServer;
+import org.apache.commons.lang.StringUtils;
 
 import java.sql.SQLException;
 
@@ -13,10 +15,27 @@ import java.sql.SQLException;
  * To change this template use File | Settings | File Templates.
  */
 public class SolrProxyConnection extends SolrConnection {
+    private static String proxyUrl;
     public SolrProxyConnection(String serverUrl) {
-        super(serverUrl);
-        ProxySolrServer solrServer = new ProxySolrServer();
-        setSolrServer(solrServer);
+        super(proxyUrl);
+        serverUrl = serverUrl.replaceFirst("^proxy:", "");
+        try {
+            SolrConnection connection = ConnectionTypeDetector.getInstance().find(serverUrl);
+            ProxiedSolrServer proxyServer = new ProxiedSolrServer(proxyUrl);
+            proxyServer.setBypassConnection(connection);
+            setSolrServer(proxyServer);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static boolean accept(String url) {
+        return StringUtils.startsWith(url, "proxy:");
+    }
+
+
+    public static void setProxy(String proxyUrl) {
+
     }
     @Override
     public void setQueryTimeout(int second) {
@@ -30,6 +49,6 @@ public class SolrProxyConnection extends SolrConnection {
 
     @Override
     public void close() throws SQLException {
-        //To change body of implemented methods use File | Settings | File Templates.
+        getSolrServer().shutdown();
     }
 }

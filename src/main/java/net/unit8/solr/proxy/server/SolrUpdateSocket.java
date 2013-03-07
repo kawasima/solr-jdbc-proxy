@@ -1,10 +1,13 @@
-package net.unit8.solr.proxy;
+package net.unit8.solr.proxy.server;
 
 import org.apache.solr.client.solrj.SolrServer;
 import org.apache.solr.client.solrj.request.UpdateRequest;
 import org.apache.solr.common.util.NamedList;
 import org.eclipse.jetty.websocket.WebSocket;
 import org.seasar.util.io.SerializeUtil;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Created with IntelliJ IDEA.
@@ -14,9 +17,12 @@ import org.seasar.util.io.SerializeUtil;
  * To change this template use File | Settings | File Templates.
  */
 public class SolrUpdateSocket implements WebSocket.OnBinaryMessage {
+    private List<UpdateRequest> updateRequestList = new ArrayList<UpdateRequest>();
+    private Connection connection;
+
     @Override
     public void onOpen(Connection connection) {
-        //To change body of implemented methods use File | Settings | File Templates.
+        this.connection = connection;
     }
 
     @Override
@@ -30,10 +36,21 @@ public class SolrUpdateSocket implements WebSocket.OnBinaryMessage {
         byte[] buf = new byte[length];
         System.arraycopy(data, offset, buf, 0, length);
         UpdateRequest request = (UpdateRequest) SerializeUtil.fromBinaryToObject(buf);
-        try {
-            NamedList<Object> response = solrServer.request(request);
-        } catch (Exception e) {
+        updateRequestList.add(request);
 
+        if (request.getAction() == UpdateRequest.ACTION.COMMIT) {
+            try {
+                NamedList<Object> response = null;
+                synchronized (SolrUpdateSocket.class) {
+                    for (UpdateRequest req : updateRequestList) {
+                        response = solrServer.request(request);
+                    }
+                }
+                byte[] res = SerializeUtil.fromObjectToBinary(response);
+                connection.sendMessage(res, 0, res.length);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
     }
 }

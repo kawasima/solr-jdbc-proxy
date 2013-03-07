@@ -1,4 +1,4 @@
-package net.unit8.solr.proxy;
+package net.unit8.solr.proxy.server;
 
 import org.eclipse.jetty.server.Connector;
 import org.eclipse.jetty.server.Server;
@@ -7,7 +7,6 @@ import org.eclipse.jetty.websocket.WebSocket;
 import org.eclipse.jetty.websocket.WebSocketHandler;
 
 import javax.servlet.http.HttpServletRequest;
-import java.util.concurrent.ArrayBlockingQueue;
 
 /**
  * Created with IntelliJ IDEA.
@@ -16,9 +15,7 @@ import java.util.concurrent.ArrayBlockingQueue;
  * Time: 12:32
  * To change this template use File | Settings | File Templates.
  */
-public class ProxyServer {
-    public ArrayBlockingQueue<UpdateRequestBatch> queue = new ArrayBlockingQueue<UpdateRequestBatch>(100);
-
+public class UpdateProxyServer {
     public static void main(String[] args) throws Exception {
         Connector connector = new SelectChannelConnector();
         connector.setPort(6687);

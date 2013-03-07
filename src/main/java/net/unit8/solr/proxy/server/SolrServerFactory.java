@@ -1,4 +1,4 @@
-package net.unit8.solr.proxy;
+package net.unit8.solr.proxy.server;
 
 import org.apache.solr.client.solrj.SolrServer;
 import org.apache.solr.client.solrj.embedded.EmbeddedSolrServer;
@@ -18,7 +18,7 @@ public class SolrServerFactory {
     }
 
     public static void init() {
-        System.setProperty("solr.solr.home", "src/main/resources");
+        System.setProperty("solr.solr.home", "src/test/resources");
         CoreContainer.Initializer initializer = new CoreContainer.Initializer();
         CoreContainer coreContainer = initializer.initialize();
         solrServer = new EmbeddedSolrServer(coreContainer, coreContainer.getDefaultCoreName());

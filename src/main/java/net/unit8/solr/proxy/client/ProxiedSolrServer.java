@@ -1,10 +1,10 @@
 package net.unit8.solr.proxy.client;
 
+import net.unit8.solr.jdbc.impl.SolrConnection;
 import org.apache.solr.client.solrj.SolrRequest;
 import org.apache.solr.client.solrj.SolrServer;
 import org.apache.solr.client.solrj.SolrServerException;
 import org.apache.solr.client.solrj.request.UpdateRequest;
-import org.apache.solr.client.solrj.response.UpdateResponse;
 import org.apache.solr.common.util.NamedList;
 import org.eclipse.jetty.websocket.WebSocket;
 import org.eclipse.jetty.websocket.WebSocketClient;
@@ -15,24 +15,34 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 /**
- * Created with IntelliJ IDEA.
- * User: UU034251
- * Date: 13/03/05
- * Time: 16:40
- * To change this template use File | Settings | File Templates.
+ * @author kawasima
  */
-public class ProxySolrServer extends SolrServer {
+public class ProxiedSolrServer extends SolrServer {
+    private SolrConnection bypassConnection;
     private static WebSocketClientFactory webSocketClientFactory;
     static {
         webSocketClientFactory = new WebSocketClientFactory();
-        webSocketClientFactory.start();
+        try {
+            webSocketClientFactory.start();
+        } catch (Exception e) {
+
+        }
     }
 
     private URI uri;
     private NamedList<Object> response;
     private WebSocket.Connection connection;
+
+    public ProxiedSolrServer(String proxyServerUrl) {
+        uri = URI.create(proxyServerUrl);
+    }
+
+    public void setBypassConnection(SolrConnection bypassConnection) {
+        this.bypassConnection = bypassConnection;
+    }
 
     @Override
     public NamedList<Object> request(SolrRequest request) throws SolrServerException, IOException {
@@ -48,20 +58,39 @@ public class ProxySolrServer extends SolrServer {
             }
             byte[] serializedRequest = SerializeUtil.fromObjectToBinary(request);
             connection.sendMessage(serializedRequest, 0, serializedRequest.length);
-            synchronized (this) {
-
+            if (((UpdateRequest) request).getAction() == UpdateRequest.ACTION.COMMIT) {
+                synchronized (this) {
+                    try {
+                        TimeUnit.SECONDS.timedWait(this, 30);
+                    } catch (InterruptedException ignore) {
+                    }
+                    try {
+                        return response.clone();
+                    } finally {
+                        response = null;
+                    }
+                }
+            } else {
+                return new NamedList<Object>();
             }
-            return response;
+        } else {
+            return bypassConnection.getSolrServer().request(request);
         }
-        return null;
     }
 
     private WebSocket.Connection createConnection() throws IOException, ExecutionException, InterruptedException {
         WebSocketClient client = webSocketClientFactory.newWebSocketClient();
+        final ProxiedSolrServer parent = this;
         Future<WebSocket.Connection> connectionFuture = client.open(uri, new WebSocket.OnBinaryMessage() {
             @Override
             public void onMessage(byte[] data, int offset, int length) {
-                //To change body of implemented methods use File | Settings | File Templates.
+                byte[] buf = new byte[length];
+                System.arraycopy(data, offset, buf, 0, length);
+                response = (NamedList<Object>)SerializeUtil.fromBinaryToObject(buf);
+
+                synchronized (parent) {
+                    parent.notify();
+                }
             }
 
             @Override
@@ -76,7 +105,9 @@ public class ProxySolrServer extends SolrServer {
         });
         return connectionFuture.get();
     }
+
     @Override
     public void shutdown() {
+        connection.close();
     }
 }
