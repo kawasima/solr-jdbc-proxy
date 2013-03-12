@@ -8,11 +8,7 @@ import org.apache.commons.lang.StringUtils;
 import java.sql.SQLException;
 
 /**
- * Created with IntelliJ IDEA.
- * User: UU034251
- * Date: 13/03/05
- * Time: 16:36
- * To change this template use File | Settings | File Templates.
+ * @author kawasima
  */
 public class SolrProxyConnection extends SolrConnection {
     private static String proxyUrl;
@@ -35,7 +31,7 @@ public class SolrProxyConnection extends SolrConnection {
 
 
     public static void setProxy(String proxyUrl) {
-
+        SolrProxyConnection.proxyUrl = proxyUrl;
     }
     @Override
     public void setQueryTimeout(int second) {

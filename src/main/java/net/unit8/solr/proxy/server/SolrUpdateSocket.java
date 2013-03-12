@@ -5,18 +5,17 @@ import org.apache.solr.client.solrj.request.UpdateRequest;
 import org.apache.solr.common.util.NamedList;
 import org.eclipse.jetty.websocket.WebSocket;
 import org.seasar.util.io.SerializeUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Created with IntelliJ IDEA.
- * User: UU034251
- * Date: 13/03/05
- * Time: 12:40
- * To change this template use File | Settings | File Templates.
+ * @author kawasima
  */
 public class SolrUpdateSocket implements WebSocket.OnBinaryMessage {
+    private static final Logger logger = LoggerFactory.getLogger(SolrUpdateSocket.class);
     private List<UpdateRequest> updateRequestList = new ArrayList<UpdateRequest>();
     private Connection connection;
 
@@ -27,7 +26,7 @@ public class SolrUpdateSocket implements WebSocket.OnBinaryMessage {
 
     @Override
     public void onClose(int closeCode, String message) {
-        //To change body of implemented methods use File | Settings | File Templates.
+        this.connection = null;
     }
 
     @Override
@@ -42,10 +41,13 @@ public class SolrUpdateSocket implements WebSocket.OnBinaryMessage {
             try {
                 NamedList<Object> response = null;
                 synchronized (SolrUpdateSocket.class) {
+                    long t1 = System.currentTimeMillis();
                     for (UpdateRequest req : updateRequestList) {
-                        response = solrServer.request(request);
+                        response = solrServer.request(req);
                     }
+                    logger.info("Batch updated {} documents {}ms", updateRequestList.size()-1, System.currentTimeMillis() - t1);
                 }
+                updateRequestList.clear();
                 byte[] res = SerializeUtil.fromObjectToBinary(response);
                 connection.sendMessage(res, 0, res.length);
             } catch (Exception e) {

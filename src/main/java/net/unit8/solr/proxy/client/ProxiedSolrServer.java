@@ -65,14 +65,14 @@ public class ProxiedSolrServer extends SolrServer {
                     } catch (InterruptedException ignore) {
                     }
                     try {
-                        return response.clone();
+                        if (response != null)
+                            return response.clone();
                     } finally {
                         response = null;
                     }
                 }
-            } else {
-                return new NamedList<Object>();
             }
+            return new NamedList<Object>();
         } else {
             return bypassConnection.getSolrServer().request(request);
         }
