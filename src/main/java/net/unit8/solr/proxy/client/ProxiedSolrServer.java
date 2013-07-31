@@ -82,6 +82,7 @@ public class ProxiedSolrServer extends SolrServer {
         WebSocketClient client = webSocketClientFactory.newWebSocketClient();
         final ProxiedSolrServer parent = this;
         Future<WebSocket.Connection> connectionFuture = client.open(uri, new WebSocket.OnBinaryMessage() {
+            @SuppressWarnings("unchecked")
             @Override
             public void onMessage(byte[] data, int offset, int length) {
                 byte[] buf = new byte[length];
