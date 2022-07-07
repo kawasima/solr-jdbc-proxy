@@ -15,7 +15,7 @@
         </repository>
     </repositories>
     <properties>
-        <jettyVersion>8.1.9.v20130131</jettyVersion>
+        <jettyVersion>10.0.10</jettyVersion>
     </properties>
     <dependencies>
         <dependency>
